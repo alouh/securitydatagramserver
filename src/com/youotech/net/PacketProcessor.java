@@ -55,12 +55,15 @@ public class PacketProcessor implements Runnable {
                 String usbInfoStr = arrayStrToStr(msg,",",1);
 
                 String ipStr = datagramPacket.getAddress().getHostAddress();
-                String usbType = arrayStrToStr(usbInfoStr,";",0);
+                String usbType = Operator.query_UsbType(arrayStrToStr(usbInfoStr,";",0));
                 String macStr = arrayStrToStr(usbInfoStr,";",1);
                 String userName = arrayStrToStr(usbInfoStr,";",2);
                 String hostName = arrayStrToStr(usbInfoStr,";",3);
 
-                Operator.insert_DeviceInfo(ipStr,macStr,userName,hostName,usbType);//插入终端信息和USB类型
+                int insertCode = Operator.insert_DeviceInfo(ipStr,macStr,userName,hostName,usbType);//插入终端信息和USB类型
+                backMsg.append(2);//插入数据标识符
+                backMsg.append(",");//分隔符
+                backMsg.append(insertCode);//插入数目,-1:插入异常;0:没成功一条,other:成功other条
 
                 break;
             default:
