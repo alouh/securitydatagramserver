@@ -4,6 +4,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -19,16 +21,14 @@ public class Operator {
      * 查询黑名单列表
      * @return 以英文句号.隔开的黑名单
      */
-    public static String query_WhiteList(){
+    public static String query_WhiteList(Connection connection){
 
-        Connection connection = null;
         Statement statement = null;
         ResultSet resultSet = null;
         StringBuilder middleSB = new StringBuilder();
         String whiteTypes = "error";
-        String sqlStr = "SELECT TL_PATH FROM se_device WHERE TL_ALLOW = '禁止'";
+        String sqlStr = "SELECT TL_PATH FROM usb_typelist WHERE TL_ALLOW = '禁用'";
         try {
-            connection = DataSourceConfig.DATA_SOURCE.getConnection();//获取连接
             statement = connection.createStatement();
             resultSet = statement.executeQuery(sqlStr);
             while (resultSet.next()){
@@ -49,11 +49,6 @@ public class Operator {
             }catch (Exception e){
                 e.printStackTrace();
             }
-            try {
-                Objects.requireNonNull(connection).close();
-            }catch (Exception e){
-                e.printStackTrace();
-            }
         }
 
         return whiteTypes;
@@ -64,16 +59,14 @@ public class Operator {
      * @param path 注册表路径
      * @return USB设备类型
      */
-    public static String query_UsbType(String path){
+    public static String query_UsbType(Connection connection,String path){
 
-        Connection connection = null;
         Statement statement = null;
         ResultSet resultSet = null;
         String usbType = "error";
-        String sqlStr = String.format("SELECT SD_TYPE FROM se_device WHERE TL_PATH = '%s'",path).replace("\\","\\\\");//将单斜杠替换为双斜杠
+        String sqlStr = String.format("SELECT TL_TYPE FROM usb_typelist WHERE TL_PATH = '%s'",path).replace("\\","\\\\");//将单斜杠替换为双斜杠
 
         try {
-            connection = DataSourceConfig.DATA_SOURCE.getConnection();//获取连接
             statement = connection.createStatement();
             resultSet = statement.executeQuery(sqlStr);
             while (resultSet.next()){
@@ -93,11 +86,6 @@ public class Operator {
             }catch (Exception e){
                 e.printStackTrace();
             }
-            try {
-                Objects.requireNonNull(connection).close();
-            }catch (Exception e){
-                e.printStackTrace();
-            }
         }
 
         return usbType;
@@ -112,16 +100,14 @@ public class Operator {
      * @param usbType usb类型
      * @return 成功插入数量,-1:插入异常,0:没插入一条,other:插入other条
      */
-    public static int insert_DeviceInfo(String ip,String mac,String userName,String hostName,String usbType){
+    public static int insert_DeviceInfo(Connection connection,String ip,String mac,String userName,String hostName,String usbType){
 
         int insertCode = -1;
 
-        Connection connection = null;
         Statement statement = null;
-        String sqlStr = String.format("INSERT INTO se_rules(SD_TYPE, SR_TYPE, ID_MAC, ID_USRNAME, ID_HOSTNAME, SR_DATE)" +
+        String sqlStr = String.format("INSERT INTO usb_illegaldevice(ID_TYPE, ID_IP, ID_MAC, ID_USRNAME, ID_HOSTNAME, ID_DATE)" +
                 "VALUE ('%s','%s','%s','%s','%s','%s')",usbType,ip,mac,userName,hostName,new Date(System.currentTimeMillis()));
         try {
-            connection = DataSourceConfig.DATA_SOURCE.getConnection();//获取连接
             statement = connection.createStatement();
             insertCode = statement.executeUpdate(sqlStr);
         }catch (Exception e){
@@ -133,13 +119,54 @@ public class Operator {
             }catch (Exception e){
                 e.printStackTrace();
             }
+        }
+
+        return insertCode;
+    }
+
+    /**
+     * 向短信平台表插入报警信息和手机号
+     * @param webConnection 查询手机号的数据库连接
+     * @param smpConnection 短信平台数据库连接
+     * @param msg 通知内容
+     */
+    public static void insertWarnMsg(Connection webConnection,Connection smpConnection,String msg){
+
+        String querySqlStr = "SELECT PN_NUMBER FROM usb_phonenumber";
+        Statement webStatement = null;
+        Statement smpStatement = null;
+        ResultSet resultSet = null;
+        try {
+            webStatement = webConnection.createStatement();
+            smpStatement = smpConnection.createStatement();
+            resultSet = webStatement.executeQuery(querySqlStr);
+            while (resultSet.next()){
+                try {
+                    String phoneNumber = resultSet.getString(1);
+                    smpStatement.executeUpdate("INSERT INTO OutBox(Mbno,Msg,SendTime)VALUE('" + phoneNumber + "','"
+                            + msg + "','" + new Timestamp(System.currentTimeMillis()) + ")')");//每获取一个手机号就插入一条数据
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
             try {
-                Objects.requireNonNull(connection).close();
+                Objects.requireNonNull(resultSet).close();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            try {
+                Objects.requireNonNull(smpStatement).close();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            try {
+                Objects.requireNonNull(webStatement).close();
             }catch (Exception e){
                 e.printStackTrace();
             }
         }
-
-        return insertCode;
     }
 }
