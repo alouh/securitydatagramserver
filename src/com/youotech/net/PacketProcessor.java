@@ -47,8 +47,9 @@ public class PacketProcessor implements Runnable {
             switch (flagStr) {
                 case "1":
                     LOGGER.info("查询白名单");
+                    String osName = arrayStrToStr(msg,",",1);//获取操作系统名称
                     backMsg.append("1").append(",");//添加查询白名单标志位和分隔符
-                    String allowTypes = Operator.query_WhiteList(webConnection);//查询白名单
+                    String allowTypes = Operator.query_WhiteList(webConnection,osName);//查询白名单
                     switch (allowTypes) {
                         case "error"://查询白名单失败
                             backMsg.append("2");

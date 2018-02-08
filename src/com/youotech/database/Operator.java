@@ -4,8 +4,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -21,13 +19,13 @@ public class Operator {
      * 查询黑名单列表
      * @return 以英文句号.隔开的黑名单
      */
-    public static String query_WhiteList(Connection connection){
+    public static String query_WhiteList(Connection connection,String osName){
 
         Statement statement = null;
         ResultSet resultSet = null;
         StringBuilder middleSB = new StringBuilder();
         String whiteTypes = "error";
-        String sqlStr = "SELECT TL_PATH FROM usb_typelist WHERE TL_ALLOW = '禁用'";
+        String sqlStr = "SELECT TL_PATH FROM usb_typelist WHERE TL_ALLOW = '禁用' AND TL_OSNAME = '" + osName + "'";
         try {
             statement = connection.createStatement();
             resultSet = statement.executeQuery(sqlStr);
